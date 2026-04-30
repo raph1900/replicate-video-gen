@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Replicate Video Generator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0f; color: #e0e0e8; min-height: 100vh; }
+
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border-bottom: 1px solid #2a2a4a;
+      padding: 14px 24px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    header .logo { width: 32px; height: 32px; background: linear-gradient(135deg, #7c3aed, #2563eb); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    header h1 { font-size: 18px; font-weight: 700; color: #fff; }
+
+    /* API bar */
+    .api-bar {
+      background: #0d0d18; border-bottom: 1px solid #1e1e32;
+      padding: 10px 24px; display: flex; align-items: center; gap: 10px;
+    }
+    .api-bar label { font-size: 12px; color: #6b7280; white-space: nowrap; }
+    .api-bar input { flex: 1; max-width: 340px; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px; padding: 7px 12px; color: #e0e0e8; font-size: 13px; outline: none; }
+    .api-bar input:focus { border-color: #6366f1; }
+    .api-bar button { background: #6366f1; border: none; border-radius: 8px; padding: 7px 14px; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .gen-all-btn {
+      margin-left: auto;
+      background: linear-gradient(135deg, #7c3aed, #2563eb);
+      border: none; border-radius: 8px; padding: 8px 18px;
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .gen-all-btn:hover:not(:disabled) { opacity: 0.88; }
+    .gen-all-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Main layout */
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 0;
+      height: calc(100vh - 100px);
+      overflow: hidden;
+    }
+
+    /* Scene column */
+    .scene-col {
+      display: flex; flex-direction: column;
+      border-right: 1px solid #1e1e32;
+      overflow: hidden;
+    }
+    .scene-col:last-child { border-right: none; }
+
+    .scene-header {
+      background: #0d0d18;
+      border-bottom: 1px solid #1e1e32;
+      padding: 10px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .scene-title { font-size: 13px; font-weight: 700; color: #a5b4fc; }
+    .scene-status { font-size: 11px; color: #4b5563; }
+    .scene-status.running { color: #a5b4fc; }
+    .scene-status.done { color: #4ade80; }
+    .scene-status.error { color: #f87171; }
+
+    .scene-body { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .scene-body::-webkit-scrollbar { width: 4px; }
+    .scene-body::-webkit-scrollbar-track { background: transparent; }
+    .scene-body::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 4px; }
+
+    /* Form fields */
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+    input[type="text"], input[type="password"], textarea, select {
+      width: 100%; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px;
+      padding: 8px 10px; color: #e0e0e8; font-size: 12px; outline: none;
+    }
+    input:focus, textarea:focus, select:focus { border-color: #6366f1; }
+    textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
+    select option { background: #1a1a2e; }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed #2a2a4a; border-radius: 8px; padding: 12px;
+      text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .upload-zone:hover, .upload-zone.drag-over { border-color: #6366f1; background: rgba(99,102,241,0.05); }
+    .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .upload-zone p { font-size: 11px; color: #6b7280; }
+    .upload-zone p strong { color: #a5b4fc; }
+    .preview-img { display: none; width: 100%; border-radius: 6px; margin-top: 8px; max-height: 140px; object-fit: contain; background: #0a0a0f; }
+
+    .badge { font-size: 9px; padding: 1px 6px; border-radius: 20px; white-space: nowrap; margin-left: auto; flex-shrink: 0; }
+    .badge-featured { background: rgba(245,158,11,0.2); color: #f59e0b; }
+    .badge-fast { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .badge-quality { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+    .badge-new { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+    /* Ratio grid */
+    .ratio-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .ratio-btn {
+      background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 6px;
+      padding: 5px 3px; text-align: center; cursor: pointer; font-size: 10px; color: #9ca3af;
+      transition: all 0.15s; user-select: none;
+    }
+    .ratio-btn:hover { border-color: #6366f1; color: #a5b4fc; }
+    .ratio-btn.active { background: rgba(99,102,241,0.15); border-color: #6366f1; color: #a5b4fc; font-weight: 600; }
+
+    /* Slider */
+    .slider-row { display: flex; align-items: center; gap: 8px; }
+    .slider-row input[type="range"] { flex: 1; -webkit-appearance: none; height: 3px; background: #2a2a4a; border-radius: 3px; border: none; padding: 0; }
+    .slider-row input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: #6366f1; border-radius: 50%; cursor: pointer; }
+    .slider-val { min-width: 28px; text-align: right; font-size: 11px; font-weight: 600; color: #a5b4fc; }
+
+    /* Toggle */
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px; padding: 8px 10px; }
+    .toggle-row .tl { font-size: 11px; color: #c4c4d4; }
+    .toggle { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .toggle input { display: none; }
+    .toggle-track { position: absolute; inset: 0; background: #2a2a4a; border-radius: 10px; cursor: pointer; transition: background 0.2s; }
+    .toggle input:checked + .toggle-track { background: #6366f1; }
+    .toggle-track::after { content: ''; position: absolute; width: 14px; height: 14px; background: #fff; border-radius: 50%; top: 3px; left: 3px; transition: transform 0.2s; }
+    .toggle input:checked + .toggle-track::after { transform: translateX(16px); }
+
+    /* Generate btn */
+    .gen-btn {
+      width: 100%; padding: 10px; background: linear-gradient(135deg, #7c3aed, #2563eb);
+      border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .gen-btn:hover:not(:disabled) { opacity: 0.88; }
+    .gen-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Progress */
+    .progress-wrap { background: #1e1e32; border-radius: 4px; height: 3px; overflow: hidden; display: none; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, #7c3aed, #2563eb); border-radius: 4px; width: 40%; animation: slide 1.5s ease-in-out infinite; }
+    @keyframes slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Video output */
+    .video-output { display: flex; flex-direction: column; gap: 8px; }
+    .video-card {
+      background: #0d0d16; border: 1px solid #1e1e32; border-radius: 10px; overflow: hidden;
+    }
+    .video-card-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid #1e1e32; }
+    .video-card-header span { font-size: 11px; font-weight: 600; color: #6b7280; }
+    .video-placeholder { display: flex; align-items: center; justify-content: center; height: 130px; color: #2a2a4a; text-align: center; }
+    .video-wrap { display: none; position: relative; background: #000; line-height: 0; }
+    .video-wrap video { width: 100%; max-height: 200px; display: block; pointer-events: none; }
+    .video-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .play-icon { width: 36px; height: 36px; background: rgba(0,0,0,0.6); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: transform 0.15s; }
+    .video-overlay:hover .play-icon { transform: scale(1.1); }
+    .dl-btn { display: none; width: 100%; padding: 7px; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25); border-radius: 0 0 10px 10px; color: #4ade80; font-size: 11px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .dl-btn:hover { background: rgba(34,197,94,0.15); }
+
+    /* Log */
+    .log-box {
+      background: #080810; border: 1px solid #1e1e32; border-radius: 6px;
+      padding: 8px 10px; font-family: monospace; font-size: 11px; color: #4b5563;
+      min-height: 80px; max-height: 220px; overflow-y: auto;
+    }
+    .log-box:empty::before { content: 'No output yet…'; color: #2a2a3a; }
+    .log-line { padding: 1px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .log-line.info { color: #6b7280; }
+    .log-line.success { color: #4ade80; }
+    .log-line.error { color: #f87171; font-weight: 600; }
+    .log-line.warn { color: #fbbf24; }
+    .log-header { font-size: 10px; font-weight: 700; color: #4b5563; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .log-clear { font-size: 9px; color: #2a2a4a; cursor: pointer; padding: 1px 6px; border: 1px solid #1e1e32; border-radius: 4px; background: none; }
+    .log-clear:hover { color: #6b7280; border-color: #2a2a4a; }
+
+    /* Divider */
+    hr { border: none; border-top: 1px solid #1e1e32; }
+
+    /* Variations */
+    .var-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎬</div>
+  <h1>Replicate Video Generator</h1>
+</header>
+
+<div class="api-bar">
+  <label>API Key</label>
+  <input type="password" id="api-key" placeholder="r8_..." />
+  <button onclick="saveKey()">Save</button>
+  <label style="margin-left:16px">Claude Key</label>
+  <input type="password" id="anthropic-key" placeholder="sk-ant-..." style="max-width:260px" />
+  <button onclick="saveAnthropicKey()">Save</button>
+  <button onclick="syncAll()" style="background:#1a1a2e;border:1px solid #2a2a4a;border-radius:8px;padding:8px 14px;color:#a5b4fc;font-size:12px;font-weight:600;cursor:pointer;" title="Copy Scene 1 settings to all scenes">🔄 Sync Scene 1 → All</button>
+  <button class="gen-all-btn" id="gen-all-btn" onclick="generateAll()">⚡ Generate All Scenes</button>
+</div>
+
+<div class="workspace" id="workspace"></div>
+
+<script>
+// ============================================================
+// State
+// ============================================================
+const NUM_SCENES = 4;
+const scenes = Array.from({ length: NUM_SCENES }, (_, i) => ({
+  id: i,
+  imageBase64: null,
+  lastFrameBase64: null,
+  refImages: [],
+  prompt: '',
+  negPrompt: '',
+  model: 'bytedance/seedance-2.0',
+  endpoint: 'models',
+  ratio: '16:9',
+  variations: 1,
+  seed: '',
+  sdResolution: '720p',
+  sdDuration: 5,
+  sdAuto: true,
+  sdAudio: true,
+  motion: 5,
+  fps: 24,
+  cfg: 7,
+  duration: 5,
+  aiVary: false,
+  // output
+  status: 'idle', // idle | running | done | error
+  videos: [], // { url, seed }
+  generatingCount: 0,
+}));
+
+const versionCache = {};
+const completedByScene = {}; // sceneId -> [{url, seed, varIdx}]
+
+const MODELS = [
+  { id: 'bytedance/seedance-2.0', endpoint: 'models', name: 'Seedance 2.0 ✦', price: '480p $0.08–0.10/s · 720p $0.18–0.22/s', badge: 'Featured', cls: 'featured badge-featured' },
+  { id: 'kwaivgi/kling-v1.6-standard', endpoint: 'models', name: 'Kling v1.6 Standard', price: '$0.05/sec · 5s=$0.25', badge: 'Budget', cls: 'badge-fast' },
+  { id: 'kwaivgi/kling-v1.6-pro', endpoint: 'models', name: 'Kling v1.6 Pro', price: '$0.095/sec · 5s=$0.48', badge: 'Pro', cls: 'badge-quality' },
+  { id: 'kwaivgi/kling-v2.0', endpoint: 'models', name: 'Kling v2.0', price: '$0.28/sec · 5s=$1.40', badge: 'New', cls: 'badge-new' },
+  { id: 'kwaivgi/kling-v2.1-master', endpoint: 'models', name: 'Kling v2.1 Master', price: '$0.28/sec · 5s=$1.40', badge: 'Best', cls: 'badge-featured' },
+  { id: 'minimax/video-01-live', endpoint: 'models', name: 'MiniMax Video-01 Live', price: '$0.50 flat per video', badge: 'Quality', cls: 'badge-quality' },
+  { id: 'sunfjun/stable-video-diffusion', endpoint: 'versions', name: 'Stable Video Diffusion', price: '~$0.037 per run', badge: 'Cheapest', cls: 'badge-fast' },
+  { id: 'wavespeedai/wan-2.1-i2v-480p', endpoint: 'versions', name: 'Wan 2.1 I2V 480p', price: '$0.09/sec · 5s=$0.45', badge: 'Open', cls: 'badge-new' },
+];
+
+// ============================================================
+// Build UI
+// ============================================================
+function buildWorkspace() {
+  const ws = document.getElementById('workspace');
+  ws.innerHTML = '';
+  scenes.forEach(s => ws.appendChild(buildSceneCol(s)));
+}
+
+function buildSceneCol(s) {
+  const col = document.createElement('div');
+  col.className = 'scene-col';
+  col.id = `scene-col-${s.id}`;
+  col.innerHTML = `
+    <div class="scene-header">
+      <span class="scene-title">Scene ${s.id + 1}</span>
+      <span class="scene-status" id="sstatus-${s.id}">Idle</span>
+    </div>
+    <div class="scene-body" id="sbody-${s.id}">
+
+      <!-- Image upload -->
+      <div class="field">
+        <label>Source Image (first frame)</label>
+        <div class="upload-zone" id="uzone-${s.id}" ondragover="doDragOver(event,${s.id})" ondragleave="doDragLeave(${s.id})" ondrop="doDrop(event,${s.id})">
+          <input type="file" accept="image/*" onchange="handleImg(event,${s.id})" />
+          <p><strong>Click to upload</strong> or drag & drop</p>
+          <p>PNG · JPG · WEBP</p>
+        </div>
+        <img id="ipreview-${s.id}" class="preview-img" />
+      </div>
+
+      <!-- Prompt -->
+      <div class="field">
+        <label>Prompt</label>
+        <textarea id="prompt-${s.id}" placeholder='Describe the motion...' oninput="scenes[${s.id}].prompt=this.value"></textarea>
+      </div>
+
+      <!-- Neg prompt -->
+      <div class="field">
+        <label>Negative Prompt</label>
+        <textarea id="neg-${s.id}" placeholder="blur, distortion..." style="min-height:44px" oninput="scenes[${s.id}].negPrompt=this.value"></textarea>
+      </div>
+
+      <hr />
+
+      <!-- Model -->
+      <div class="field">
+        <label>Model</label>
+        <select id="mselect-${s.id}" onchange="selectModel(${s.id},this)">
+          ${MODELS.map(m => `<option value="${m.id}" data-endpoint="${m.endpoint}" ${m.id === s.model ? 'selected' : ''}>${m.name} — ${m.price}</option>`).join('')}
+        </select>
+      </div>
+
+      <hr />
+
+      <!-- Seedance params -->
+      <div id="sdparams-${s.id}">
+        <div class="field">
+          <label>Resolution</label>
+          <select onchange="scenes[${s.id}].sdResolution=this.value">
+            <option value="720p">720p — High Quality</option>
+            <option value="480p">480p — Faster</option>
+          </select>
+        </div>
+        <div class="field" style="margin-top:8px">
+          <label>Duration</label>
+          <div class="slider-row">
+            <input type="range" min="3" max="10" step="1" value="5" oninput="scenes[${s.id}].sdDuration=+this.value;scenes[${s.id}].sdAuto=false;this.nextElementSibling.textContent=this.value+'s'" />
+            <span class="slider-val">5s</span>
+            <button style="background:#1a1a2e;border:1px solid #2a2a4a;border-radius:6px;padding:3px 8px;color:#9ca3af;font-size:10px;cursor:pointer" onclick="scenes[${s.id}].sdAuto=true;this.style.color='#a5b4fc'">Auto</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Common params (hidden for Seedance) -->
+      <div id="commonparams-${s.id}" style="display:none">
+        <div class="field">
+          <label>Duration (s)</label>
+          <div class="slider-row">
+            <input type="range" min="2" max="10" step="1" value="5" oninput="scenes[${s.id}].duration=+this.value;this.nextElementSibling.textContent=this.value+'s'" />
+            <span class="slider-val">5s</span>
+          </div>
+        </div>
+        <div class="field" id="mfield-${s.id}" style="margin-top:8px">
+          <label>Motion</label>
+          <div class="slider-row">
+            <input type="range" min="1" max="10" step="1" value="5" oninput="scenes[${s.id}].motion=+this.value;this.nextElementSibling.textContent=this.value" />
+            <span class="slider-val">5</span>
+          </div>
+        </div>
+        <div class="field" id="fpsfield-${s.id}" style="margin-top:8px">
+          <label>FPS</label>
+          <div class="slider-row">
+            <input type="range" min="8" max="30" step="1" value="24" oninput="scenes[${s.id}].fps=+this.value;this.nextElementSibling.textContent=this.value" />
+            <span class="slider-val">24</span>
+          </div>
+        </div>
+        <div class="field" id="cfgfield-${s.id}" style="margin-top:8px">
+          <label>CFG Scale</label>
+          <div class="slider-row">
+            <input type="range" min="1" max="20" step="0.5" value="7" oninput="scenes[${s.id}].cfg=+this.value;this.nextElementSibling.textContent=this.value" />
+            <span class="slider-val">7</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audio toggle (always visible) -->
+      <div class="toggle-row" id="audiorow-${s.id}">
+        <span class="tl">🔊 Generate Audio <span id="audiolabel-${s.id}" style="color:#4b5563;font-size:10px">(Seedance only)</span></span>
+        <label class="toggle"><input type="checkbox" id="audiocheck-${s.id}" checked onchange="scenes[${s.id}].sdAudio=this.checked" /><div class="toggle-track"></div></label>
+      </div>
+
+      <hr />
+
+      <!-- Ratio -->
+      <div class="field">
+        <label>Aspect Ratio</label>
+        <div class="ratio-grid" id="rgrid-${s.id}">
+          ${['16:9','9:16','1:1','4:3','3:4','21:9'].map(r =>
+            `<div class="ratio-btn ${r===s.ratio?'active':''}" onclick="selectRatio(${s.id},this,'${r}')">${r}</div>`
+          ).join('')}
+        </div>
+      </div>
+
+      <!-- Variations -->
+      <div class="field">
+        <label>Variations</label>
+        <div class="var-grid" id="vgrid-${s.id}">
+          ${[1,2,3].map(v =>
+            `<div class="ratio-btn ${v===s.variations?'active':''}" onclick="selectVar(${s.id},this,${v})">${v} video${v>1?'s':''}</div>`
+          ).join('')}
+        </div>
+      </div>
+
+      <!-- AI Vary toggle -->
+      <div class="toggle-row" style="background:rgba(124,58,237,0.08);border-color:rgba(124,58,237,0.25)">
+        <span class="tl">🎨 <strong>AI Vary Prompts</strong> <span style="color:#6b7280;font-size:10px">— Claude generates unique prompts per variation</span></span>
+        <label class="toggle"><input type="checkbox" id="aiVary-${s.id}" onchange="scenes[${s.id}].aiVary=this.checked" /><div class="toggle-track"></div></label>
+      </div>
+
+      <!-- Seed -->
+      <div class="field">
+        <label>Seed <span style="font-weight:400;color:#4a4a6a">(empty=random)</span></label>
+        <input type="text" id="seed-${s.id}" placeholder="e.g. 42" oninput="scenes[${s.id}].seed=this.value" />
+      </div>
+
+      <!-- Generate -->
+      <button class="gen-btn" id="gbtn-${s.id}" onclick="generateScene(${s.id})">⚡ Generate Scene ${s.id+1}</button>
+
+      <hr />
+
+      <!-- Progress -->
+      <div class="progress-wrap" id="prog-${s.id}"><div class="progress-bar"></div></div>
+
+      <!-- Log -->
+      <div class="log-header">
+        <span>📋 Output</span>
+        <button class="log-clear" onclick="clearLog(${s.id})">Clear</button>
+      </div>
+      <div class="log-box" id="log-${s.id}"></div>
+
+      <!-- Output videos -->
+      <div class="video-output" id="vout-${s.id}"></div>
+
+    </div>
+  `;
+  return col;
+}
+
+buildWorkspace();
+
+// ============================================================
+// API key
+// ============================================================
+const savedKey = localStorage.getItem('replicate_key');
+if (savedKey) document.getElementById('api-key').value = savedKey;
+function saveKey() {
+  const k = document.getElementById('api-key').value.trim();
+  if (k) { localStorage.setItem('replicate_key', k); }
+}
+function getKey() { return document.getElementById('api-key').value.trim() || localStorage.getItem('replicate_key') || ''; }
+
+const savedAnthropicKey = localStorage.getItem('anthropic_key');
+if (savedAnthropicKey) document.getElementById('anthropic-key').value = savedAnthropicKey;
+function saveAnthropicKey() {
+  const k = document.getElementById('anthropic-key').value.trim();
+  if (k) { localStorage.setItem('anthropic_key', k); }
+}
+function getAnthropicKey() { return document.getElementById('anthropic-key').value.trim() || localStorage.getItem('anthropic_key') || ''; }
+
+async function varyPrompts(prompt, count) {
+  const anthropicKey = getAnthropicKey();
+  if (!anthropicKey) throw new Error('No Claude API key — enter it in the bar above');
+  const res = await fetch('/vary-prompts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, count, anthropicKey }),
+  });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { throw new Error(`Server error: ${text.slice(0, 120)}`); }
+  if (!res.ok || data.error) throw new Error(data.error || 'vary-prompts failed');
+  return data.prompts; // string[]
+}
+
+// ============================================================
+// Model / ratio / variation selectors
+// ============================================================
+function selectModel(sid, el) {
+  // el can be a <select> (from onchange) or a direct call with model id string (from syncAll)
+  const selectEl = document.getElementById(`mselect-${sid}`);
+  const modelId = el.tagName === 'SELECT' ? el.value : (el.dataset ? el.dataset.model : el);
+  if (selectEl) selectEl.value = modelId;
+  const opt = selectEl ? selectEl.querySelector(`option[value="${modelId}"]`) : null;
+  scenes[sid].model = modelId;
+  scenes[sid].endpoint = opt ? opt.dataset.endpoint : (MODELS.find(m => m.id === modelId)?.endpoint || 'models');
+
+  const isSeedance = scenes[sid].model === 'bytedance/seedance-2.0';
+  const isKling = scenes[sid].model.startsWith('kwaivgi/kling');
+  const isSVD = scenes[sid].model === 'sunfjun/stable-video-diffusion';
+
+  document.getElementById(`sdparams-${sid}`).style.display = isSeedance ? '' : 'none';
+  document.getElementById(`commonparams-${sid}`).style.display = isSeedance ? 'none' : '';
+  document.getElementById(`mfield-${sid}`).style.display = (!isKling && !isSVD) ? '' : 'none';
+  document.getElementById(`fpsfield-${sid}`).style.display = (!isKling && !isSVD) ? '' : 'none';
+  document.getElementById(`cfgfield-${sid}`).style.display = (!isKling && !isSVD) ? '' : 'none';
+
+  // Audio toggle — enabled for Seedance, disabled (greyed) for others
+  const audioCheck = document.getElementById(`audiocheck-${sid}`);
+  const audioLabel = document.getElementById(`audiolabel-${sid}`);
+  const audioRow = document.getElementById(`audiorow-${sid}`);
+  if (isSeedance) {
+    audioCheck.disabled = false;
+    audioRow.style.opacity = '1';
+    audioLabel.textContent = '';
+  } else {
+    audioCheck.disabled = true;
+    audioRow.style.opacity = '0.4';
+    audioLabel.textContent = '(not supported by this model)';
+  }
+}
+
+function selectRatio(sid, el, ratio) {
+  document.querySelectorAll(`#rgrid-${sid} .ratio-btn`).forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  scenes[sid].ratio = ratio;
+}
+
+function selectVar(sid, el, v) {
+  document.querySelectorAll(`#vgrid-${sid} .ratio-btn`).forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  scenes[sid].variations = v;
+}
+
+// ============================================================
+// Image upload
+// ============================================================
+function handleImg(e, sid) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    scenes[sid].imageBase64 = ev.target.result;
+    const img = document.getElementById(`ipreview-${sid}`);
+    img.src = ev.target.result;
+    img.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+function doDragOver(e, sid) { e.preventDefault(); document.getElementById(`uzone-${sid}`).classList.add('drag-over'); }
+function doDragLeave(sid) { document.getElementById(`uzone-${sid}`).classList.remove('drag-over'); }
+function doDrop(e, sid) {
+  e.preventDefault();
+  doDragLeave(sid);
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) handleImg({ target: { files: [f] } }, sid);
+}
+
+// ============================================================
+// Log helpers
+// ============================================================
+function addLog(sid, msg, type = 'info') {
+  const box = document.getElementById(`log-${sid}`);
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+function clearLog(sid) {
+  document.getElementById(`log-${sid}`).innerHTML = '';
+}
+function setStatus(sid, state, text) {
+  const el = document.getElementById(`sstatus-${sid}`);
+  el.className = 'scene-status ' + state;
+  el.textContent = text;
+}
+
+// ============================================================
+// Build input
+// ============================================================
+function buildInput(sid, seed, varIdx) {
+  const s = scenes[sid];
+  const prompt = (s._variedPrompts && s._variedPrompts[varIdx] != null) ? s._variedPrompts[varIdx] : s.prompt;
+  const negPrompt = s.negPrompt;
+
+  if (s.model === 'bytedance/seedance-2.0') {
+    const input = { prompt };
+    if (s.imageBase64) input.image = s.imageBase64;
+    input.duration = s.sdAuto ? -1 : s.sdDuration;
+    input.resolution = s.sdResolution;
+    input.aspect_ratio = s.ratio;
+    input.generate_audio = s.sdAudio;
+    if (s.seed) input.seed = parseInt(s.seed);
+    else if (seed) input.seed = seed;
+    return input;
+  }
+  if (s.model === 'minimax/video-01-live') {
+    return { first_frame_image: s.imageBase64, prompt, prompt_optimizer: true };
+  }
+  if (s.model === 'sunfjun/stable-video-diffusion') {
+    return { input_image: s.imageBase64, video_length: '25_frames_with_svd_xt', sizing_strategy: 'maintain_aspect_ratio', frames_per_second: s.fps, motion_bucket_id: s.motion * 12, cond_aug: 0.02, decoding_t: 7, seed };
+  }
+  if (s.model === 'wavespeedai/wan-2.1-i2v-480p') {
+    return { image: s.imageBase64, prompt, negative_prompt: negPrompt || 'blur, distortion', sample_guide_scale: s.cfg, sample_steps: 30, seed, fast_mode: 'Balanced', aspect_ratio: s.ratio };
+  }
+  if (s.model.startsWith('kwaivgi/kling')) {
+    const inp = { prompt, start_image: s.imageBase64, duration: s.duration, aspect_ratio: s.ratio, cfg_scale: 0.5, seed };
+    if (negPrompt) inp.negative_prompt = negPrompt;
+    return inp;
+  }
+  return { image: s.imageBase64, prompt, seed };
+}
+
+// ============================================================
+// Generate
+// ============================================================
+async function generateScene(sid) {
+  const apiKey = getKey();
+  if (!apiKey) { alert('Enter your Replicate API key first.'); return; }
+  const s = scenes[sid];
+  if (s.endpoint !== 'models' && !s.imageBase64) { alert('Upload a source image for Scene ' + (sid+1)); return; }
+
+  document.getElementById(`gbtn-${sid}`).disabled = true;
+  document.getElementById(`gbtn-${sid}`).textContent = '⏳ Generating...';
+  document.getElementById(`prog-${sid}`).style.display = 'block';
+  document.getElementById(`vout-${sid}`).innerHTML = '';
+  completedByScene[sid] = [];
+  setStatus(sid, 'running', `Starting ${s.variations} variation${s.variations>1?'s':''}...`);
+  addLog(sid, `Model: ${s.model} | Variations: ${s.variations}`);
+
+  const baseSeed = s.seed ? parseInt(s.seed) : (Math.floor(Math.random() * 900000) + 1);
+
+  // AI prompt variations
+  s._variedPrompts = null;
+  if (s.aiVary && s.prompt) {
+    addLog(sid, `🎨 Asking Claude to vary prompt x${s.variations}...`);
+    try {
+      s._variedPrompts = await varyPrompts(s.prompt, s.variations);
+      s._variedPrompts.forEach((p, i) => addLog(sid, `Var ${i+1}: ${p.slice(0,60)}...`));
+    } catch(e) {
+      addLog(sid, 'AI vary error: ' + e.message, 'error');
+      // Continue with original prompt
+    }
+  }
+
+  let version = null;
+  if (s.endpoint === 'versions') {
+    try { version = await getModelVersion(s.model, apiKey, sid); }
+    catch(e) { addLog(sid, 'Version fetch error: ' + e.message, 'error'); resetBtn(sid); return; }
+  }
+
+  // Create variation cards
+  for (let i = 0; i < s.variations; i++) {
+    const label = (s._variedPrompts && s._variedPrompts[i]) ? s._variedPrompts[i].slice(0, 55) + '…' : null;
+    document.getElementById(`vout-${sid}`).appendChild(makeVarCard(sid, i, label));
+  }
+
+  const jobs = Array.from({ length: s.variations }, (_, i) =>
+    sleep(i * 2000).then(() => runVar(sid, i, baseSeed + i, apiKey, version))
+  );
+
+  const results = await Promise.allSettled(jobs);
+  const ok = results.filter(r => r.status === 'fulfilled').length;
+  const fail = results.filter(r => r.status === 'rejected').length;
+
+  document.getElementById(`prog-${sid}`).style.display = 'none';
+  if (fail === 0) setStatus(sid, 'done', `${ok} done ✓`);
+  else if (ok > 0) setStatus(sid, 'done', `${ok} done, ${fail} failed`);
+  else setStatus(sid, 'error', 'Failed');
+  resetBtn(sid);
+}
+
+async function generateAll() {
+  const btn = document.getElementById('gen-all-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating All...';
+  // Fire all scenes in parallel (each scene staggers its own variations)
+  await Promise.allSettled(scenes.map(s => generateScene(s.id)));
+  btn.disabled = false;
+  btn.textContent = '⚡ Generate All Scenes';
+}
+
+async function runVar(sid, varIdx, seed, apiKey, version) {
+  const s = scenes[sid];
+  const card = document.getElementById(`vcard-${sid}-${varIdx}`);
+  const statusEl = card.querySelector('.vc-status');
+  const progressEl = card.querySelector('.vc-prog');
+  const placeholder = card.querySelector('.video-placeholder');
+  const videoWrap = card.querySelector('.video-wrap');
+  const dlBtn = card.querySelector('.dl-btn');
+
+  statusEl.textContent = 'Starting...';
+  progressEl.style.display = 'block';
+
+  try {
+    const input = buildInput(sid, seed, varIdx);
+    let res;
+    if (s.endpoint === 'models') {
+      res = await fetch(`/api/models/${s.model}/predictions`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Token ' + apiKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input }),
+      });
+    } else {
+      res = await fetch('/api/predictions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Token ' + apiKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version, input }),
+      });
+    }
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || JSON.stringify(e)); }
+    const pred = await res.json();
+    addLog(sid, `Var ${varIdx+1} ID: ${pred.id} | seed: ${seed}`);
+    statusEl.textContent = 'Processing...';
+
+    const url = await pollVar(sid, pred.id, apiKey, statusEl);
+
+    // Show inline
+    const video = card.querySelector('video');
+    video.src = url;
+    video.load();
+    video.play().catch(() => {});
+    placeholder.style.display = 'none';
+    progressEl.style.display = 'none';
+    videoWrap.style.display = 'block';
+    const icon = card.querySelector('.play-icon');
+    if (icon) icon.textContent = '⏸';
+    statusEl.textContent = 'Done ✓';
+    statusEl.style.color = '#4ade80';
+    dlBtn.style.display = 'block';
+    dlBtn.onclick = () => triggerDownload(url, `scene${sid+1}-var${varIdx+1}-seed${seed}.mp4`);
+
+    if (!completedByScene[sid]) completedByScene[sid] = [];
+    completedByScene[sid].push({ url, varIdx, seed });
+    addLog(sid, `Var ${varIdx+1} done`, 'success');
+
+  } catch(err) {
+    addLog(sid, `Var ${varIdx+1} error: ${err.message}`, 'error');
+    statusEl.textContent = 'Failed';
+    statusEl.style.color = '#f87171';
+    progressEl.style.display = 'none';
+    throw err;
+  }
+}
+
+async function pollVar(sid, id, apiKey, statusEl) {
+  const maxWait = 600000; const interval = 3000; let elapsed = 0;
+  while (elapsed < maxWait) {
+    await sleep(interval); elapsed += interval;
+    const res = await fetch(`/api/predictions/${id}`, { headers: { 'Authorization': 'Token ' + apiKey } });
+    const data = await res.json();
+    if (statusEl) statusEl.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1) + '...';
+    if (data.status === 'succeeded') return Array.isArray(data.output) ? data.output[0] : data.output;
+    if (data.status === 'failed' || data.status === 'canceled') throw new Error(data.error || 'Prediction ' + data.status);
+  }
+  throw new Error('Timed out');
+}
+
+function makeVarCard(sid, varIdx, promptLabel) {
+  const div = document.createElement('div');
+  div.className = 'video-card';
+  div.id = `vcard-${sid}-${varIdx}`;
+  div.innerHTML = `
+    <div class="video-card-header">
+      <span>Variation ${varIdx + 1}${promptLabel ? ` <span title="${promptLabel}" style="color:#a78bfa;font-weight:400;font-size:10px;margin-left:4px">🎨 AI</span>` : ''}</span>
+      <span class="vc-status" style="font-size:10px;color:#6b7280">Queued</span>
+    </div>
+    <div class="vc-prog progress-wrap" style="display:none;margin:6px 8px 0;"><div class="progress-bar"></div></div>
+    <div class="video-placeholder"><div style="font-size:24px">🎥</div></div>
+    <div class="video-wrap">
+      <video loop playsinline muted style="width:100%;max-height:200px;display:block;pointer-events:none;"></video>
+      <div class="video-overlay" onclick="togglePlay(this)">
+        <div class="play-icon">▶</div>
+      </div>
+    </div>
+    <button class="dl-btn">⬇️ Download</button>
+  `;
+  return div;
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+function togglePlay(overlay) {
+  const video = overlay.closest('.video-wrap').querySelector('video');
+  const icon = overlay.querySelector('.play-icon');
+  if (video.paused) { video.play(); icon.textContent = '⏸'; }
+  else { video.pause(); icon.textContent = '▶'; }
+}
+
+function triggerDownload(url, filename) {
+  const proxyUrl = `/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+  const a = document.createElement('a');
+  a.href = proxyUrl; a.download = filename; a.style.display = 'none';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => document.body.removeChild(a), 1000);
+}
+
+async function getModelVersion(modelId, apiKey, sid) {
+  if (versionCache[modelId]) return versionCache[modelId];
+  const res = await fetch(`/api/models/${modelId}/versions`, { headers: { 'Authorization': 'Token ' + apiKey } });
+  if (!res.ok) throw new Error('Could not fetch versions');
+  const data = await res.json();
+  const v = data.results[0].id;
+  versionCache[modelId] = v;
+  addLog(sid, 'Version: ' + v.slice(0, 12) + '...');
+  return v;
+}
+
+function resetBtn(sid) {
+  const btn = document.getElementById(`gbtn-${sid}`);
+  btn.disabled = false;
+  btn.textContent = `⚡ Generate Scene ${sid + 1}`;
+}
+
+function syncAll() {
+  const src = scenes[0];
+  for (let sid = 1; sid < NUM_SCENES; sid++) {
+    // Model
+    selectModel(sid, src.model);
+
+    // Resolution (quality)
+    const resEl = document.querySelector(`#sdparams-${sid} select`);
+    if (resEl) { resEl.value = src.sdResolution; scenes[sid].sdResolution = src.sdResolution; }
+
+    // Aspect ratio — click the matching button
+    document.querySelectorAll(`#rgrid-${sid} .ratio-btn`).forEach(b => {
+      if (b.textContent.trim() === src.ratio) b.click();
+    });
+  }
+
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  btn.textContent = '✓ Synced!';
+  btn.style.color = '#4ade80'; btn.style.borderColor = '#4ade80';
+  setTimeout(() => { btn.textContent = orig; btn.style.color = '#a5b4fc'; btn.style.borderColor = '#2a2a4a'; }, 1500);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Mirror console.error to all scene logs so errors are always visible
+const _origError = console.error.bind(console);
+console.error = (...args) => {
+  _origError(...args);
+  const msg = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+  for (let i = 0; i < NUM_SCENES; i++) addLog(i, '⚠ ' + msg, 'error');
+};
+window.addEventListener('unhandledrejection', e => {
+  const msg = e.reason?.message || String(e.reason);
+  for (let i = 0; i < NUM_SCENES; i++) addLog(i, '⚠ Unhandled: ' + msg, 'error');
+});
+</script>
+</body>
+</html>
