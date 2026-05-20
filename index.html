@@ -6,13 +6,15 @@
   <title>Replicate Video Generator</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0f; color: #e0e0e8; min-height: 100vh; }
+    html, body { height: 100%; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0f; color: #e0e0e8; display: flex; flex-direction: column; overflow: hidden; }
 
     header {
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
       border-bottom: 1px solid #2a2a4a;
       padding: 14px 24px;
       display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
     }
     header .logo { width: 32px; height: 32px; background: linear-gradient(135deg, #7c3aed, #2563eb); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
     header h1 { font-size: 18px; font-weight: 700; color: #fff; }
@@ -21,6 +23,7 @@
     .api-bar {
       background: #0d0d18; border-bottom: 1px solid #1e1e32;
       padding: 10px 24px; display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0;
     }
     .api-bar label { font-size: 12px; color: #6b7280; white-space: nowrap; }
     .api-bar input { flex: 1; max-width: 340px; background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px; padding: 7px 12px; color: #e0e0e8; font-size: 13px; outline: none; }
@@ -36,12 +39,39 @@
     .gen-all-btn:hover:not(:disabled) { opacity: 0.88; }
     .gen-all-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
+    /* Tab Nav */
+    .tab-nav {
+      background: #0a0a0f;
+      border-bottom: 2px solid #1e1e32;
+      padding: 0 24px;
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      padding: 10px 20px;
+      color: #6b7280;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: #a5b4fc; }
+    .tab-btn.active { color: #a5b4fc; border-bottom-color: #6366f1; }
+
     /* Main layout */
     .workspace {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr 1fr;
       gap: 0;
-      height: calc(100vh - 100px);
+      flex: 1;
+      min-height: 0;
       overflow: hidden;
     }
 
@@ -173,11 +203,225 @@
     .log-clear { font-size: 9px; color: #2a2a4a; cursor: pointer; padding: 1px 6px; border: 1px solid #1e1e32; border-radius: 4px; background: none; }
     .log-clear:hover { color: #6b7280; border-color: #2a2a4a; }
 
-    /* Divider */
     hr { border: none; border-top: 1px solid #1e1e32; }
 
     /* Variations */
     .var-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+
+    /* ============================================================
+       FULL VIDEO CREATOR
+       ============================================================ */
+    #fvc-panel {
+      display: none;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 20px 24px 40px;
+    }
+    #fvc-panel::-webkit-scrollbar { width: 6px; }
+    #fvc-panel::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 4px; }
+
+    .fvc-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      max-width: 1400px;
+    }
+
+    .fvc-section {
+      background: #0d0d18;
+      border: 1px solid #1e1e32;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .fvc-section:last-child { margin-bottom: 0; }
+
+    .fvc-section h3 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #a5b4fc;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .fvc-section h3 .sub {
+      font-weight: 400;
+      color: #4b5563;
+      font-size: 11px;
+    }
+
+    /* Image upload grid */
+    .fvc-images-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .fvc-img-slot {}
+    .fvc-slot-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #4b5563;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 5px;
+    }
+    .fvc-upload-zone {
+      border: 2px dashed #2a2a4a;
+      border-radius: 8px;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+      padding: 8px;
+    }
+    .fvc-upload-zone:hover { border-color: #6366f1; background: rgba(99,102,241,0.05); }
+    .fvc-upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .fvc-upload-zone .uz-icon { font-size: 22px; }
+    .fvc-upload-zone .uz-text { font-size: 10px; color: #6b7280; text-align: center; }
+    .fvc-thumb { display: none; width: 100%; height: 85px; object-fit: cover; border-radius: 6px; }
+    .fvc-thumb.loaded { display: block; }
+
+    .fvc-desc-box {
+      margin-top: 7px;
+      background: #080810;
+      border: 1px solid #1e1e32;
+      border-radius: 6px;
+      padding: 7px 9px;
+      font-size: 11px;
+      color: #6b7280;
+      min-height: 44px;
+      line-height: 1.55;
+    }
+    .fvc-desc-box.analyzing { color: #a5b4fc; font-style: italic; }
+    .fvc-desc-box.done { color: #9ca3af; font-style: normal; }
+    .fvc-desc-box.err { color: #f87171; }
+    .fvc-desc-box.empty::before { content: 'Description will appear here after analysis'; color: #2a2a3a; font-style: italic; }
+
+    .fvc-analyze-btn {
+      width: 100%;
+      padding: 8px;
+      background: rgba(99,102,241,0.08);
+      border: 1px solid rgba(99,102,241,0.25);
+      border-radius: 8px;
+      color: #a5b4fc;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .fvc-analyze-btn:hover:not(:disabled) { background: rgba(99,102,241,0.18); }
+    .fvc-analyze-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Chip selectors */
+    .chip-section { margin-bottom: 12px; }
+    .chip-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .chip-group { display: flex; flex-wrap: wrap; gap: 5px; }
+    .chip {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 20px;
+      padding: 4px 11px;
+      font-size: 11px;
+      color: #9ca3af;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .chip:hover { border-color: #6366f1; color: #a5b4fc; }
+    .chip.active { background: rgba(99,102,241,0.15); border-color: #6366f1; color: #a5b4fc; font-weight: 600; }
+
+    .fvc-textarea {
+      width: 100%;
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      padding: 10px;
+      color: #e0e0e8;
+      font-size: 12px;
+      line-height: 1.6;
+      resize: vertical;
+      outline: none;
+      font-family: inherit;
+    }
+    .fvc-textarea:focus { border-color: #6366f1; }
+
+    .fvc-build-btn {
+      width: 100%;
+      padding: 11px;
+      background: linear-gradient(135deg, #7c3aed, #2563eb);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .fvc-build-btn:hover:not(:disabled) { opacity: 0.88; }
+    .fvc-build-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .fvc-final-prompt {
+      width: 100%;
+      background: #0a0a14;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      padding: 12px;
+      color: #e0e0e8;
+      font-size: 12px;
+      line-height: 1.7;
+      resize: vertical;
+      min-height: 160px;
+      outline: none;
+      font-family: inherit;
+    }
+    .fvc-final-prompt:focus { border-color: #6366f1; }
+
+    .fvc-gen-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #059669, #0d9488);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .fvc-gen-btn:hover:not(:disabled) { opacity: 0.88; }
+    .fvc-gen-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .fvc-step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      background: rgba(99,102,241,0.2);
+      border: 1px solid rgba(99,102,241,0.4);
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      color: #a5b4fc;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -198,7 +442,16 @@
   <button class="gen-all-btn" id="gen-all-btn" onclick="generateAll()">⚡ Generate All Scenes</button>
 </div>
 
+<!-- Tab Navigation -->
+<div class="tab-nav">
+  <button class="tab-btn active" data-tab="scenes" onclick="switchTab('scenes')">🎬 Scene Creation</button>
+  <button class="tab-btn" data-tab="fvc" onclick="switchTab('fvc')">✨ Full Video Creator</button>
+</div>
+
 <div class="workspace" id="workspace"></div>
+
+<!-- Full Video Creator Panel -->
+<div id="fvc-panel"></div>
 
 <script>
 // ============================================================
@@ -226,14 +479,40 @@ const scenes = Array.from({ length: NUM_SCENES }, (_, i) => ({
   cfg: 7,
   duration: 5,
   aiVary: false,
-  // output
-  status: 'idle', // idle | running | done | error
-  videos: [], // { url, seed }
+  status: 'idle',
+  videos: [],
   generatingCount: 0,
 }));
 
+// FVC State
+const fvc = {
+  images: [null, null, null],
+  descriptions: ['', '', ''],
+  goal: '',
+  numScenes: 3,
+  // Video parameters
+  storyArc: '',
+  pacing: '',
+  tone: '',
+  subject: '',
+  storyNotes: '',
+  // Cinematography
+  angle: '',
+  lighting: '',
+  movement: '',
+  mood: '',
+  focus: '',
+  // Scene prompts (one per scene)
+  scenePrompts: ['', '', ''],
+  model: 'bytedance/seedance-2.0',
+  endpoint: 'models',
+  ratio: '16:9',
+  sdResolution: '720p',
+  sdDuration: 5,
+};
+
 const versionCache = {};
-const completedByScene = {}; // sceneId -> [{url, seed, varIdx}]
+const completedByScene = {};
 
 const MODELS = [
   { id: 'bytedance/seedance-2.0', endpoint: 'models', name: 'Seedance 2.0 ✦', price: '480p $0.08–0.10/s · 720p $0.18–0.22/s', badge: 'Featured', cls: 'featured badge-featured' },
@@ -247,7 +526,19 @@ const MODELS = [
 ];
 
 // ============================================================
-// Build UI
+// Tab switching
+// ============================================================
+function switchTab(name) {
+  document.getElementById('workspace').style.display = name === 'scenes' ? 'grid' : 'none';
+  document.getElementById('fvc-panel').style.display = name === 'fvc' ? 'block' : 'none';
+  // Show/hide sync+gen-all buttons (scene creation only)
+  const sceneOnlyBtns = document.querySelectorAll('.gen-all-btn, [onclick="syncAll()"]');
+  sceneOnlyBtns.forEach(b => b.style.display = name === 'scenes' ? '' : 'none');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+}
+
+// ============================================================
+// Build Scene Creation UI
 // ============================================================
 function buildWorkspace() {
   const ws = document.getElementById('workspace');
@@ -266,7 +557,6 @@ function buildSceneCol(s) {
     </div>
     <div class="scene-body" id="sbody-${s.id}">
 
-      <!-- Image upload -->
       <div class="field">
         <label>Source Image (first frame)</label>
         <div class="upload-zone" id="uzone-${s.id}" ondragover="doDragOver(event,${s.id})" ondragleave="doDragLeave(${s.id})" ondrop="doDrop(event,${s.id})">
@@ -277,13 +567,11 @@ function buildSceneCol(s) {
         <img id="ipreview-${s.id}" class="preview-img" />
       </div>
 
-      <!-- Prompt -->
       <div class="field">
         <label>Prompt</label>
         <textarea id="prompt-${s.id}" placeholder='Describe the motion...' oninput="scenes[${s.id}].prompt=this.value"></textarea>
       </div>
 
-      <!-- Neg prompt -->
       <div class="field">
         <label>Negative Prompt</label>
         <textarea id="neg-${s.id}" placeholder="blur, distortion..." style="min-height:44px" oninput="scenes[${s.id}].negPrompt=this.value"></textarea>
@@ -291,7 +579,6 @@ function buildSceneCol(s) {
 
       <hr />
 
-      <!-- Model -->
       <div class="field">
         <label>Model</label>
         <select id="mselect-${s.id}" onchange="selectModel(${s.id},this)">
@@ -301,7 +588,6 @@ function buildSceneCol(s) {
 
       <hr />
 
-      <!-- Seedance params -->
       <div id="sdparams-${s.id}">
         <div class="field">
           <label>Resolution</label>
@@ -313,14 +599,13 @@ function buildSceneCol(s) {
         <div class="field" style="margin-top:8px">
           <label>Duration</label>
           <div class="slider-row">
-            <input type="range" min="3" max="10" step="1" value="5" oninput="scenes[${s.id}].sdDuration=+this.value;scenes[${s.id}].sdAuto=false;this.nextElementSibling.textContent=this.value+'s'" />
+            <input type="range" min="3" max="15" step="1" value="5" oninput="scenes[${s.id}].sdDuration=+this.value;scenes[${s.id}].sdAuto=false;this.nextElementSibling.textContent=this.value+'s'" />
             <span class="slider-val">5s</span>
             <button style="background:#1a1a2e;border:1px solid #2a2a4a;border-radius:6px;padding:3px 8px;color:#9ca3af;font-size:10px;cursor:pointer" onclick="scenes[${s.id}].sdAuto=true;this.style.color='#a5b4fc'">Auto</button>
           </div>
         </div>
       </div>
 
-      <!-- Common params (hidden for Seedance) -->
       <div id="commonparams-${s.id}" style="display:none">
         <div class="field">
           <label>Duration (s)</label>
@@ -352,7 +637,6 @@ function buildSceneCol(s) {
         </div>
       </div>
 
-      <!-- Audio toggle (always visible) -->
       <div class="toggle-row" id="audiorow-${s.id}">
         <span class="tl">🔊 Generate Audio <span id="audiolabel-${s.id}" style="color:#4b5563;font-size:10px">(Seedance only)</span></span>
         <label class="toggle"><input type="checkbox" id="audiocheck-${s.id}" checked onchange="scenes[${s.id}].sdAudio=this.checked" /><div class="toggle-track"></div></label>
@@ -360,7 +644,6 @@ function buildSceneCol(s) {
 
       <hr />
 
-      <!-- Ratio -->
       <div class="field">
         <label>Aspect Ratio</label>
         <div class="ratio-grid" id="rgrid-${s.id}">
@@ -370,7 +653,6 @@ function buildSceneCol(s) {
         </div>
       </div>
 
-      <!-- Variations -->
       <div class="field">
         <label>Variations</label>
         <div class="var-grid" id="vgrid-${s.id}">
@@ -380,34 +662,28 @@ function buildSceneCol(s) {
         </div>
       </div>
 
-      <!-- AI Vary toggle -->
       <div class="toggle-row" style="background:rgba(124,58,237,0.08);border-color:rgba(124,58,237,0.25)">
         <span class="tl">🎨 <strong>AI Vary Prompts</strong> <span style="color:#6b7280;font-size:10px">— Claude generates unique prompts per variation</span></span>
         <label class="toggle"><input type="checkbox" id="aiVary-${s.id}" onchange="scenes[${s.id}].aiVary=this.checked" /><div class="toggle-track"></div></label>
       </div>
 
-      <!-- Seed -->
       <div class="field">
         <label>Seed <span style="font-weight:400;color:#4a4a6a">(empty=random)</span></label>
         <input type="text" id="seed-${s.id}" placeholder="e.g. 42" oninput="scenes[${s.id}].seed=this.value" />
       </div>
 
-      <!-- Generate -->
       <button class="gen-btn" id="gbtn-${s.id}" onclick="generateScene(${s.id})">⚡ Generate Scene ${s.id+1}</button>
 
       <hr />
 
-      <!-- Progress -->
       <div class="progress-wrap" id="prog-${s.id}"><div class="progress-bar"></div></div>
 
-      <!-- Log -->
       <div class="log-header">
         <span>📋 Output</span>
         <button class="log-clear" onclick="clearLog(${s.id})">Clear</button>
       </div>
       <div class="log-box" id="log-${s.id}"></div>
 
-      <!-- Output videos -->
       <div class="video-output" id="vout-${s.id}"></div>
 
     </div>
@@ -418,13 +694,219 @@ function buildSceneCol(s) {
 buildWorkspace();
 
 // ============================================================
-// API key
+// Build Full Video Creator UI
+// ============================================================
+function buildFVC() {
+  const panel = document.getElementById('fvc-panel');
+
+  const cinemaRows = [
+    { key: 'angle',    label: 'Camera Angle',    chips: ['Wide Shot','Close-Up','Aerial/Drone','Eye Level','Low Angle','High Angle','POV','Over Shoulder'] },
+    { key: 'lighting', label: 'Lighting',         chips: ['Natural Day','Golden Hour','Blue Hour','Studio Lit','Dramatic','Neon/Night','Soft/Overcast','Backlit'] },
+    { key: 'movement', label: 'Camera Movement',  chips: ['Static','Slow Pan','Zoom In','Zoom Out','Tracking Shot','Handheld','Crane Up','Dolly Push'] },
+    { key: 'mood',     label: 'Mood & Style',     chips: ['Cinematic','Documentary','Dreamy','Energetic','Peaceful','Dramatic','Romantic','Surreal'] },
+  ];
+
+  panel.innerHTML = `
+  <div class="fvc-layout">
+
+    <!-- LEFT COLUMN -->
+    <div>
+
+      <!-- Step 1: Images -->
+      <div class="fvc-section">
+        <h3><span class="fvc-step-num">1</span> Reference Images <span class="sub">(upload 1–3)</span></h3>
+        <div class="fvc-images-grid">
+          ${[0,1,2].map(i => `
+            <div class="fvc-img-slot">
+              <div class="fvc-slot-label">Image ${i+1}${i===0?' · first frame':''}</div>
+              <div class="fvc-upload-zone" id="fvc-uzone-${i}">
+                <input type="file" accept="image/*" onchange="fvcHandleImg(event,${i})" />
+                <img class="fvc-thumb" id="fvc-thumb-${i}" />
+                <span class="uz-icon" id="fvc-uicon-${i}">🖼️</span>
+                <span class="uz-text" id="fvc-utxt-${i}">${i===0?'Required':'Optional'}</span>
+              </div>
+              <div class="fvc-desc-box empty" id="fvc-desc-${i}"></div>
+            </div>
+          `).join('')}
+        </div>
+        <button class="fvc-analyze-btn" id="fvc-analyze-btn" onclick="fvcAnalyzeAll()">🔍 Analyze Images with Claude</button>
+      </div>
+
+      <!-- Step 2: Video Concept -->
+      <div class="fvc-section">
+        <h3><span class="fvc-step-num">2</span> Video Concept</h3>
+
+        <textarea class="fvc-textarea" style="min-height:72px" placeholder="What is this video about? What should it show or achieve?&#10;e.g. 'A luxury watch product reveal — slow, elegant, premium'" id="fvc-goal" oninput="fvc.goal=this.value"></textarea>
+
+        <div style="margin-top:12px">
+          <span class="chip-label">Number of Scenes</span>
+          <div class="chip-group" id="fvc-scene-count" style="margin-top:6px">
+            ${[1,2,3,4,5,6].map(n => `
+              <div class="chip ${n===3?'active':''}" style="min-width:38px;text-align:center;font-weight:700" data-n="${n}" onclick="fvcSetNumScenes(${n})">${n}</div>
+            `).join('')}
+          </div>
+          <div style="font-size:11px;color:#4b5563;margin-top:6px">Claude will write a separate prompt for each scene, forming a complete video in order.</div>
+        </div>
+      </div>
+
+      <!-- Step 3: Video Parameters -->
+      <div class="fvc-section">
+        <h3><span class="fvc-step-num">3</span> Video Parameters</h3>
+
+        <div class="chip-section">
+          <span class="chip-label">Who / What is the main subject?</span>
+          <input type="text" style="margin-top:6px" placeholder="e.g. 'a woman in her 30s', 'a luxury watch', 'a golden retriever puppy'" id="fvc-subject" oninput="fvc.subject=this.value" />
+        </div>
+
+        <div class="chip-section">
+          <span class="chip-label">Story Arc</span>
+          <div class="chip-group" id="fvc-chips-storyArc">
+            ${['Linear Journey','Before & After','Day in Life','Product Story','Emotional Arc','Abstract/Artistic'].map(c =>
+              `<div class="chip" onclick="fvcChip('storyArc',this,'${c}')">${c}</div>`).join('')}
+          </div>
+        </div>
+
+        <div class="chip-section">
+          <span class="chip-label">Pacing</span>
+          <div class="chip-group" id="fvc-chips-pacing">
+            ${['Slow & Cinematic','Moderate','Fast Cuts'].map(c =>
+              `<div class="chip" onclick="fvcChip('pacing',this,'${c}')">${c}</div>`).join('')}
+          </div>
+        </div>
+
+        <div class="chip-section">
+          <span class="chip-label">Tone</span>
+          <div class="chip-group" id="fvc-chips-tone">
+            ${['Inspiring','Emotional','Energetic','Peaceful','Dramatic','Playful','Professional','Luxury'].map(c =>
+              `<div class="chip" onclick="fvcChip('tone',this,'${c}')">${c}</div>`).join('')}
+          </div>
+        </div>
+
+        <div class="chip-section">
+          <span class="chip-label">Story Notes <span style="font-weight:400;color:#4b5563;text-transform:none">(specific moments, transitions, what happens per scene)</span></span>
+          <textarea class="fvc-textarea" style="min-height:70px;margin-top:6px" placeholder="e.g. 'Scene 1: wide establishing shot of the city. Scene 2: close-up of her face looking hopeful. Scene 3: she smiles and walks forward'" id="fvc-story-notes" oninput="fvc.storyNotes=this.value"></textarea>
+        </div>
+      </div>
+
+      <!-- Step 4: Cinematography -->
+      <div class="fvc-section">
+        <h3><span class="fvc-step-num">4</span> Cinematography</h3>
+
+        ${cinemaRows.map(row => `
+          <div class="chip-section">
+            <span class="chip-label">${row.label}</span>
+            <div class="chip-group" id="fvc-chips-${row.key}">
+              ${row.chips.map(c => `<div class="chip" onclick="fvcChip('${row.key}',this,'${c}')">${c}</div>`).join('')}
+            </div>
+          </div>
+        `).join('')}
+
+        <div class="chip-section">
+          <span class="chip-label">What to Focus On</span>
+          <textarea class="fvc-textarea" style="min-height:50px;margin-top:6px" placeholder="e.g. 'the person's eyes and expression', 'the product in center frame'" id="fvc-focus" oninput="fvc.focus=this.value"></textarea>
+        </div>
+      </div>
+
+      <!-- Build Prompts Button -->
+      <button class="fvc-build-btn" id="fvc-build-btn" onclick="fvcBuildScenePrompts()">✨ Build Scene Prompts with Claude</button>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div>
+
+      <!-- Scene Prompts -->
+      <div class="fvc-section">
+        <h3><span class="fvc-step-num">5</span> Scene Prompts <span class="sub" id="fvc-scene-count-label">— 3 scenes</span></h3>
+        <div style="background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;line-height:1.6">
+          <span style="color:#a5b4fc;font-weight:700">🎬 Same subject, different shot each scene.</span><br/>
+          <span style="color:#6b7280">Claude locks the subject's exact appearance (face, product, clothing) across all scenes, but gives each scene a unique shot type — close-up, medium, wide, low angle, overhead — with a different setting per scene.</span>
+        </div>
+        <div id="fvc-prompt-boxes"></div>
+        <div style="margin-top:10px;font-size:11px;color:#4b5563">Edit any prompt freely before generating.</div>
+      </div>
+
+      <!-- Generation Settings -->
+      <div class="fvc-section">
+        <h3><span class="fvc-step-num">6</span> Generation Settings</h3>
+
+        <div class="field">
+          <label>Model</label>
+          <select id="fvc-model" onchange="fvcSelectModel(this)">
+            ${MODELS.map(m => `<option value="${m.id}" data-endpoint="${m.endpoint}" ${m.id === 'bytedance/seedance-2.0' ? 'selected' : ''}>${m.name} — ${m.price}</option>`).join('')}
+          </select>
+        </div>
+
+        <div id="fvc-sdparams" style="margin-top:10px">
+          <div class="field">
+            <label>Resolution</label>
+            <select onchange="fvc.sdResolution=this.value">
+              <option value="720p">720p — High Quality</option>
+              <option value="480p">480p — Faster</option>
+            </select>
+          </div>
+          <div class="field" style="margin-top:8px">
+            <label>Duration per scene</label>
+            <div class="slider-row">
+              <input type="range" min="3" max="15" step="1" value="5" oninput="fvc.sdDuration=+this.value;this.nextElementSibling.textContent=this.value+'s'" />
+              <span class="slider-val">5s</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:10px">
+          <label>Aspect Ratio</label>
+          <div class="ratio-grid" id="fvc-ratio-grid">
+            ${['16:9','9:16','1:1','4:3','3:4','21:9'].map(r =>
+              `<div class="ratio-btn ${r==='16:9'?'active':''}" onclick="fvcSelectRatio(this,'${r}')">${r}</div>`
+            ).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Generate -->
+      <button class="fvc-gen-btn" id="fvc-gen-btn" onclick="fvcGenerate()">⚡ Generate Full Video (<span id="fvc-gen-label">3</span> scenes)</button>
+
+      <!-- Progress -->
+      <div class="progress-wrap" id="fvc-prog" style="margin-top:12px"><div class="progress-bar"></div></div>
+
+      <!-- Log -->
+      <div style="margin-top:14px">
+        <div class="log-header">
+          <span>📋 Output</span>
+          <button class="log-clear" onclick="document.getElementById('fvc-log').innerHTML=''">Clear</button>
+        </div>
+        <div class="log-box" id="fvc-log"></div>
+      </div>
+
+      <!-- Watch Full Video button (shown after all scenes done) -->
+      <div id="fvc-watch-wrap" style="display:none;margin-top:16px">
+        <button onclick="fvcWatchFullVideo()" style="width:100%;padding:14px;background:linear-gradient(135deg,#0f766e,#0369a1);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:0.02em;transition:opacity 0.2s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">
+          ▶ Watch Full Video (<span id="fvc-watch-label">3</span> scenes in sequence)
+        </button>
+      </div>
+
+      <!-- Video scenes in order -->
+      <div id="fvc-vout" style="margin-top:12px;display:flex;flex-direction:column;gap:14px"></div>
+
+    </div>
+  </div>
+  `;
+
+  // Initial render of prompt boxes
+  renderFvcPromptBoxes();
+}
+
+buildFVC();
+
+// ============================================================
+// API keys
 // ============================================================
 const savedKey = localStorage.getItem('replicate_key');
 if (savedKey) document.getElementById('api-key').value = savedKey;
 function saveKey() {
   const k = document.getElementById('api-key').value.trim();
-  if (k) { localStorage.setItem('replicate_key', k); }
+  if (k) localStorage.setItem('replicate_key', k);
 }
 function getKey() { return document.getElementById('api-key').value.trim() || localStorage.getItem('replicate_key') || ''; }
 
@@ -432,30 +914,14 @@ const savedAnthropicKey = localStorage.getItem('anthropic_key');
 if (savedAnthropicKey) document.getElementById('anthropic-key').value = savedAnthropicKey;
 function saveAnthropicKey() {
   const k = document.getElementById('anthropic-key').value.trim();
-  if (k) { localStorage.setItem('anthropic_key', k); }
+  if (k) localStorage.setItem('anthropic_key', k);
 }
 function getAnthropicKey() { return document.getElementById('anthropic-key').value.trim() || localStorage.getItem('anthropic_key') || ''; }
 
-async function varyPrompts(prompt, count) {
-  const anthropicKey = getAnthropicKey();
-  if (!anthropicKey) throw new Error('No Claude API key — enter it in the bar above');
-  const res = await fetch('/vary-prompts', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, count, anthropicKey }),
-  });
-  const text = await res.text();
-  let data;
-  try { data = JSON.parse(text); } catch { throw new Error(`Server error: ${text.slice(0, 120)}`); }
-  if (!res.ok || data.error) throw new Error(data.error || 'vary-prompts failed');
-  return data.prompts; // string[]
-}
-
 // ============================================================
-// Model / ratio / variation selectors
+// Scene Creation — model/ratio/var/upload/log/generate
 // ============================================================
 function selectModel(sid, el) {
-  // el can be a <select> (from onchange) or a direct call with model id string (from syncAll)
   const selectEl = document.getElementById(`mselect-${sid}`);
   const modelId = el.tagName === 'SELECT' ? el.value : (el.dataset ? el.dataset.model : el);
   if (selectEl) selectEl.value = modelId;
@@ -473,18 +939,13 @@ function selectModel(sid, el) {
   document.getElementById(`fpsfield-${sid}`).style.display = (!isKling && !isSVD) ? '' : 'none';
   document.getElementById(`cfgfield-${sid}`).style.display = (!isKling && !isSVD) ? '' : 'none';
 
-  // Audio toggle — enabled for Seedance, disabled (greyed) for others
   const audioCheck = document.getElementById(`audiocheck-${sid}`);
   const audioLabel = document.getElementById(`audiolabel-${sid}`);
   const audioRow = document.getElementById(`audiorow-${sid}`);
   if (isSeedance) {
-    audioCheck.disabled = false;
-    audioRow.style.opacity = '1';
-    audioLabel.textContent = '';
+    audioCheck.disabled = false; audioRow.style.opacity = '1'; audioLabel.textContent = '';
   } else {
-    audioCheck.disabled = true;
-    audioRow.style.opacity = '0.4';
-    audioLabel.textContent = '(not supported by this model)';
+    audioCheck.disabled = true; audioRow.style.opacity = '0.4'; audioLabel.textContent = '(not supported by this model)';
   }
 }
 
@@ -500,9 +961,6 @@ function selectVar(sid, el, v) {
   scenes[sid].variations = v;
 }
 
-// ============================================================
-// Image upload
-// ============================================================
 function handleImg(e, sid) {
   const file = e.target.files[0];
   if (!file) return;
@@ -518,26 +976,19 @@ function handleImg(e, sid) {
 function doDragOver(e, sid) { e.preventDefault(); document.getElementById(`uzone-${sid}`).classList.add('drag-over'); }
 function doDragLeave(sid) { document.getElementById(`uzone-${sid}`).classList.remove('drag-over'); }
 function doDrop(e, sid) {
-  e.preventDefault();
-  doDragLeave(sid);
+  e.preventDefault(); doDragLeave(sid);
   const f = e.dataTransfer.files[0];
   if (f && f.type.startsWith('image/')) handleImg({ target: { files: [f] } }, sid);
 }
 
-// ============================================================
-// Log helpers
-// ============================================================
 function addLog(sid, msg, type = 'info') {
   const box = document.getElementById(`log-${sid}`);
   const line = document.createElement('div');
   line.className = 'log-line ' + type;
   line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-  box.appendChild(line);
-  box.scrollTop = box.scrollHeight;
+  box.appendChild(line); box.scrollTop = box.scrollHeight;
 }
-function clearLog(sid) {
-  document.getElementById(`log-${sid}`).innerHTML = '';
-}
+function clearLog(sid) { document.getElementById(`log-${sid}`).innerHTML = ''; }
 function setStatus(sid, state, text) {
   const el = document.getElementById(`sstatus-${sid}`);
   el.className = 'scene-status ' + state;
@@ -545,12 +996,11 @@ function setStatus(sid, state, text) {
 }
 
 // ============================================================
-// Build input
+// Build input (shared between Scene Creation and FVC)
 // ============================================================
-function buildInput(sid, seed, varIdx) {
-  const s = scenes[sid];
+function buildInputFromScene(s, seed, varIdx) {
   const prompt = (s._variedPrompts && s._variedPrompts[varIdx] != null) ? s._variedPrompts[varIdx] : s.prompt;
-  const negPrompt = s.negPrompt;
+  const negPrompt = s.negPrompt || '';
 
   if (s.model === 'bytedance/seedance-2.0') {
     const input = { prompt };
@@ -567,22 +1017,41 @@ function buildInput(sid, seed, varIdx) {
     return { first_frame_image: s.imageBase64, prompt, prompt_optimizer: true };
   }
   if (s.model === 'sunfjun/stable-video-diffusion') {
-    return { input_image: s.imageBase64, video_length: '25_frames_with_svd_xt', sizing_strategy: 'maintain_aspect_ratio', frames_per_second: s.fps, motion_bucket_id: s.motion * 12, cond_aug: 0.02, decoding_t: 7, seed };
+    return { input_image: s.imageBase64, video_length: '25_frames_with_svd_xt', sizing_strategy: 'maintain_aspect_ratio', frames_per_second: s.fps, motion_bucket_id: (s.motion||5) * 12, cond_aug: 0.02, decoding_t: 7, seed };
   }
   if (s.model === 'wavespeedai/wan-2.1-i2v-480p') {
-    return { image: s.imageBase64, prompt, negative_prompt: negPrompt || 'blur, distortion', sample_guide_scale: s.cfg, sample_steps: 30, seed, fast_mode: 'Balanced', aspect_ratio: s.ratio };
+    return { image: s.imageBase64, prompt, negative_prompt: negPrompt || 'blur, distortion', sample_guide_scale: s.cfg || 7, sample_steps: 30, seed, fast_mode: 'Balanced', aspect_ratio: s.ratio };
   }
   if (s.model.startsWith('kwaivgi/kling')) {
-    const inp = { prompt, start_image: s.imageBase64, duration: s.duration, aspect_ratio: s.ratio, cfg_scale: 0.5, seed };
+    const inp = { prompt, start_image: s.imageBase64, duration: s.duration || 5, aspect_ratio: s.ratio, cfg_scale: 0.5, seed };
     if (negPrompt) inp.negative_prompt = negPrompt;
     return inp;
   }
   return { image: s.imageBase64, prompt, seed };
 }
 
+function buildInput(sid, seed, varIdx) {
+  return buildInputFromScene(scenes[sid], seed, varIdx);
+}
+
 // ============================================================
-// Generate
+// Scene Creation — generate
 // ============================================================
+async function varyPrompts(prompt, count) {
+  const anthropicKey = getAnthropicKey();
+  if (!anthropicKey) throw new Error('No Claude API key — enter it in the bar above');
+  const res = await fetch('/vary-prompts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, count, anthropicKey }),
+  });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { throw new Error(`Server error: ${text.slice(0, 120)}`); }
+  if (!res.ok || data.error) throw new Error(data.error || 'vary-prompts failed');
+  return data.prompts;
+}
+
 async function generateScene(sid) {
   const apiKey = getKey();
   if (!apiKey) { alert('Enter your Replicate API key first.'); return; }
@@ -599,17 +1068,13 @@ async function generateScene(sid) {
 
   const baseSeed = s.seed ? parseInt(s.seed) : (Math.floor(Math.random() * 900000) + 1);
 
-  // AI prompt variations
   s._variedPrompts = null;
   if (s.aiVary && s.prompt) {
     addLog(sid, `🎨 Asking Claude to vary prompt x${s.variations}...`);
     try {
       s._variedPrompts = await varyPrompts(s.prompt, s.variations);
       s._variedPrompts.forEach((p, i) => addLog(sid, `Var ${i+1}: ${p.slice(0,60)}...`));
-    } catch(e) {
-      addLog(sid, 'AI vary error: ' + e.message, 'error');
-      // Continue with original prompt
-    }
+    } catch(e) { addLog(sid, 'AI vary error: ' + e.message, 'error'); }
   }
 
   let version = null;
@@ -618,7 +1083,6 @@ async function generateScene(sid) {
     catch(e) { addLog(sid, 'Version fetch error: ' + e.message, 'error'); resetBtn(sid); return; }
   }
 
-  // Create variation cards
   for (let i = 0; i < s.variations; i++) {
     const label = (s._variedPrompts && s._variedPrompts[i]) ? s._variedPrompts[i].slice(0, 55) + '…' : null;
     document.getElementById(`vout-${sid}`).appendChild(makeVarCard(sid, i, label));
@@ -641,12 +1105,9 @@ async function generateScene(sid) {
 
 async function generateAll() {
   const btn = document.getElementById('gen-all-btn');
-  btn.disabled = true;
-  btn.textContent = '⏳ Generating All...';
-  // Fire all scenes in parallel (each scene staggers its own variations)
+  btn.disabled = true; btn.textContent = '⏳ Generating All...';
   await Promise.allSettled(scenes.map(s => generateScene(s.id)));
-  btn.disabled = false;
-  btn.textContent = '⚡ Generate All Scenes';
+  btn.disabled = false; btn.textContent = '⚡ Generate All Scenes';
 }
 
 async function runVar(sid, varIdx, seed, apiKey, version) {
@@ -682,20 +1143,15 @@ async function runVar(sid, varIdx, seed, apiKey, version) {
     addLog(sid, `Var ${varIdx+1} ID: ${pred.id} | seed: ${seed}`);
     statusEl.textContent = 'Processing...';
 
-    const url = await pollVar(sid, pred.id, apiKey, statusEl);
+    const url = await pollPrediction(pred.id, apiKey, statusEl);
 
-    // Show inline
     const video = card.querySelector('video');
-    video.src = url;
-    video.load();
-    video.play().catch(() => {});
+    video.src = url; video.load(); video.play().catch(() => {});
     placeholder.style.display = 'none';
     progressEl.style.display = 'none';
     videoWrap.style.display = 'block';
-    const icon = card.querySelector('.play-icon');
-    if (icon) icon.textContent = '⏸';
-    statusEl.textContent = 'Done ✓';
-    statusEl.style.color = '#4ade80';
+    card.querySelector('.play-icon').textContent = '⏸';
+    statusEl.textContent = 'Done ✓'; statusEl.style.color = '#4ade80';
     dlBtn.style.display = 'block';
     dlBtn.onclick = () => triggerDownload(url, `scene${sid+1}-var${varIdx+1}-seed${seed}.mp4`);
 
@@ -705,14 +1161,13 @@ async function runVar(sid, varIdx, seed, apiKey, version) {
 
   } catch(err) {
     addLog(sid, `Var ${varIdx+1} error: ${err.message}`, 'error');
-    statusEl.textContent = 'Failed';
-    statusEl.style.color = '#f87171';
+    statusEl.textContent = 'Failed'; statusEl.style.color = '#f87171';
     progressEl.style.display = 'none';
     throw err;
   }
 }
 
-async function pollVar(sid, id, apiKey, statusEl) {
+async function pollPrediction(id, apiKey, statusEl) {
   const maxWait = 600000; const interval = 3000; let elapsed = 0;
   while (elapsed < maxWait) {
     await sleep(interval); elapsed += interval;
@@ -738,17 +1193,497 @@ function makeVarCard(sid, varIdx, promptLabel) {
     <div class="video-placeholder"><div style="font-size:24px">🎥</div></div>
     <div class="video-wrap">
       <video loop playsinline muted style="width:100%;max-height:200px;display:block;pointer-events:none;"></video>
-      <div class="video-overlay" onclick="togglePlay(this)">
-        <div class="play-icon">▶</div>
-      </div>
+      <div class="video-overlay" onclick="togglePlay(this)"><div class="play-icon">▶</div></div>
     </div>
     <button class="dl-btn">⬇️ Download</button>
   `;
   return div;
 }
 
+function resetBtn(sid) {
+  const btn = document.getElementById(`gbtn-${sid}`);
+  btn.disabled = false; btn.textContent = `⚡ Generate Scene ${sid + 1}`;
+}
+
+async function getModelVersion(modelId, apiKey, sid) {
+  if (versionCache[modelId]) return versionCache[modelId];
+  const res = await fetch(`/api/models/${modelId}/versions`, { headers: { 'Authorization': 'Token ' + apiKey } });
+  if (!res.ok) throw new Error('Could not fetch versions');
+  const data = await res.json();
+  const v = data.results[0].id;
+  versionCache[modelId] = v;
+  if (sid != null) addLog(sid, 'Version: ' + v.slice(0, 12) + '...');
+  return v;
+}
+
+function syncAll() {
+  const src = scenes[0];
+  for (let sid = 1; sid < NUM_SCENES; sid++) {
+    selectModel(sid, src.model);
+    const resEl = document.querySelector(`#sdparams-${sid} select`);
+    if (resEl) { resEl.value = src.sdResolution; scenes[sid].sdResolution = src.sdResolution; }
+    document.querySelectorAll(`#rgrid-${sid} .ratio-btn`).forEach(b => {
+      if (b.textContent.trim() === src.ratio) b.click();
+    });
+  }
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  btn.textContent = '✓ Synced!'; btn.style.color = '#4ade80'; btn.style.borderColor = '#4ade80';
+  setTimeout(() => { btn.textContent = orig; btn.style.color = '#a5b4fc'; btn.style.borderColor = '#2a2a4a'; }, 1500);
+}
+
 // ============================================================
-// Helpers
+// Full Video Creator — image handling
+// ============================================================
+function fvcHandleImg(e, idx) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    fvc.images[idx] = ev.target.result;
+    // Show thumbnail
+    const thumb = document.getElementById(`fvc-thumb-${idx}`);
+    thumb.src = ev.target.result;
+    thumb.classList.add('loaded');
+    document.getElementById(`fvc-uicon-${idx}`).style.display = 'none';
+    document.getElementById(`fvc-utxt-${idx}`).style.display = 'none';
+    // Auto-analyze if Claude key is ready
+    if (getAnthropicKey()) fvcAnalyzeImage(idx);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function fvcAnalyzeImage(idx) {
+  const key = getAnthropicKey();
+  if (!key || !fvc.images[idx]) return;
+  const descEl = document.getElementById(`fvc-desc-${idx}`);
+  descEl.className = 'fvc-desc-box analyzing';
+  descEl.textContent = '🔍 Analyzing with Claude…';
+  try {
+    const res = await fetch('/describe-images', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ images: [fvc.images[idx]], anthropicKey: key }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    fvc.descriptions[idx] = data.description;
+    descEl.className = 'fvc-desc-box done';
+    descEl.textContent = data.description;
+  } catch(e) {
+    descEl.className = 'fvc-desc-box err';
+    descEl.textContent = '⚠ ' + e.message;
+  }
+}
+
+async function fvcAnalyzeAll() {
+  const key = getAnthropicKey();
+  if (!key) { alert('Enter your Claude API key first.'); return; }
+  const loaded = fvc.images.filter(Boolean);
+  if (!loaded.length) { alert('Upload at least one image first.'); return; }
+  const btn = document.getElementById('fvc-analyze-btn');
+  btn.disabled = true; btn.textContent = '🔍 Analyzing…';
+  await Promise.all(fvc.images.map((img, i) => img ? fvcAnalyzeImage(i) : Promise.resolve()));
+  btn.disabled = false; btn.textContent = '🔍 Re-analyze with Claude';
+}
+
+// ============================================================
+// Full Video Creator — scene count + prompt boxes
+// ============================================================
+function fvcSetNumScenes(n) {
+  fvc.numScenes = n;
+  // Resize scenePrompts array
+  while (fvc.scenePrompts.length < n) fvc.scenePrompts.push('');
+  fvc.scenePrompts = fvc.scenePrompts.slice(0, n);
+  // Update chip UI
+  document.querySelectorAll('#fvc-scene-count .chip').forEach(b => b.classList.toggle('active', +b.dataset.n === n));
+  // Update labels
+  const lbl = document.getElementById('fvc-scene-count-label');
+  if (lbl) lbl.textContent = `— ${n} scene${n>1?'s':''}`;
+  const genLbl = document.getElementById('fvc-gen-label');
+  if (genLbl) genLbl.textContent = n;
+  const watchLbl = document.getElementById('fvc-watch-label');
+  if (watchLbl) watchLbl.textContent = n;
+  // Hide watch button when scene count changes (new generation needed)
+  const watchWrap = document.getElementById('fvc-watch-wrap');
+  if (watchWrap) watchWrap.style.display = 'none';
+  renderFvcPromptBoxes();
+}
+
+function renderFvcPromptBoxes() {
+  const container = document.getElementById('fvc-prompt-boxes');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 0; i < fvc.numScenes; i++) {
+    const wrap = document.createElement('div');
+    wrap.style.marginBottom = '12px';
+    wrap.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+        <span style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#a5b4fc;flex-shrink:0">${i+1}</span>
+        <span style="font-size:12px;font-weight:600;color:#a5b4fc">Scene ${i+1} of ${fvc.numScenes}</span>
+        ${i===0?'<span style="font-size:10px;color:#4b5563;margin-left:auto">Opening</span>':i===fvc.numScenes-1?'<span style="font-size:10px;color:#4b5563;margin-left:auto">Closing</span>':''}
+      </div>
+      <textarea class="fvc-final-prompt" id="fvc-scene-prompt-${i}" style="min-height:90px" placeholder="Scene ${i+1} prompt will be generated here — or type your own." oninput="fvc.scenePrompts[${i}]=this.value">${fvc.scenePrompts[i]||''}</textarea>
+    `;
+    container.appendChild(wrap);
+  }
+}
+
+// ============================================================
+// Full Video Creator — chip selectors
+// ============================================================
+function fvcChip(group, el, value) {
+  el.closest('.chip-group').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  fvc[group] = value;
+}
+
+function fvcSelectModel(el) {
+  fvc.model = el.value;
+  const opt = el.querySelector(`option[value="${el.value}"]`);
+  fvc.endpoint = opt ? opt.dataset.endpoint : 'models';
+  const isSeedance = fvc.model === 'bytedance/seedance-2.0';
+  document.getElementById('fvc-sdparams').style.display = isSeedance ? 'block' : 'none';
+}
+
+function fvcSelectRatio(el, ratio) {
+  document.querySelectorAll('#fvc-ratio-grid .ratio-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  fvc.ratio = ratio;
+}
+
+function fvcSelectVar(el, v) {
+  document.querySelectorAll('#fvc-var-grid .ratio-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  fvc.variations = v;
+}
+
+// ============================================================
+// Full Video Creator — build scene prompts
+// ============================================================
+async function fvcBuildScenePrompts() {
+  const key = getAnthropicKey();
+  if (!key) { alert('Enter your Claude API key first.'); return; }
+
+  const descriptions = fvc.descriptions.filter(Boolean).join('\n\n');
+  if (!descriptions && !fvc.goal && !fvc.subject) {
+    alert('Add at least a video goal or upload an image first.');
+    return;
+  }
+
+  const btn = document.getElementById('fvc-build-btn');
+  btn.disabled = true; btn.textContent = `✨ Building ${fvc.numScenes} scene prompts…`;
+
+  try {
+    const res = await fetch('/build-scene-prompts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        description: descriptions,
+        userGoal: fvc.goal,
+        numScenes: fvc.numScenes,
+        storyArc: fvc.storyArc,
+        pacing: fvc.pacing,
+        tone: fvc.tone,
+        subject: fvc.subject,
+        storyNotes: fvc.storyNotes,
+        angle: fvc.angle,
+        lighting: fvc.lighting,
+        movement: fvc.movement,
+        mood: fvc.mood,
+        focus: fvc.focus,
+        anthropicKey: key,
+      }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    if (!data.scenes || !data.scenes.length) throw new Error('No scenes returned');
+
+    // Populate scene prompts
+    fvc.scenePrompts = data.scenes;
+    renderFvcPromptBoxes();
+
+    // Flash the section
+    const boxes = document.getElementById('fvc-prompt-boxes');
+    boxes.style.borderLeft = '2px solid #6366f1';
+    setTimeout(() => boxes.style.borderLeft = '', 1500);
+
+  } catch(e) {
+    alert('Error building scene prompts: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '✨ Build Scene Prompts with Claude';
+  }
+}
+
+// ============================================================
+// Full Video Creator — generate full video
+// ============================================================
+async function fvcGenerate() {
+  const apiKey = getKey();
+  if (!apiKey) { alert('Enter your Replicate API key first.'); return; }
+
+  // Collect prompts from textareas (in case user edited them)
+  for (let i = 0; i < fvc.numScenes; i++) {
+    const ta = document.getElementById(`fvc-scene-prompt-${i}`);
+    if (ta) fvc.scenePrompts[i] = ta.value.trim();
+  }
+
+  const filledPrompts = fvc.scenePrompts.slice(0, fvc.numScenes).filter(p => p.trim());
+  if (!filledPrompts.length) { alert('Build or write scene prompts first (Step 5).'); return; }
+
+  const btn = document.getElementById('fvc-gen-btn');
+  btn.disabled = true; btn.textContent = `⏳ Generating ${fvc.numScenes} scenes…`;
+  document.getElementById('fvc-prog').style.display = 'block';
+  document.getElementById('fvc-vout').innerHTML = '';
+  document.getElementById('fvc-log').innerHTML = '';
+
+  const sourceImg = fvc.images.find(Boolean) || null;
+
+  // Get version if needed
+  let version = null;
+  if (fvc.endpoint === 'versions') {
+    try {
+      version = await getModelVersion(fvc.model, apiKey, null);
+      fvcLog('Version: ' + version.slice(0, 12) + '...');
+    } catch(e) {
+      fvcLog('Version fetch error: ' + e.message, 'error');
+      fvcResetBtn(); return;
+    }
+  }
+
+  // Create all scene cards first (in order)
+  const vout = document.getElementById('fvc-vout');
+  for (let i = 0; i < fvc.numScenes; i++) {
+    if (fvc.scenePrompts[i]?.trim()) vout.appendChild(makeFvcSceneCard(i));
+  }
+
+  // Generate scenes with stagger (avoid rate limits)
+  const jobs = [];
+  for (let i = 0; i < fvc.numScenes; i++) {
+    const prompt = fvc.scenePrompts[i]?.trim();
+    if (!prompt) continue;
+    const seed = Math.floor(Math.random() * 900000) + 1;
+    jobs.push(sleep(i * 2500).then(() => runFvcScene(i, seed, apiKey, version, prompt, sourceImg)));
+  }
+
+  const results = await Promise.allSettled(jobs);
+  document.getElementById('fvc-prog').style.display = 'none';
+  const ok = results.filter(r => r.status === 'fulfilled').length;
+  const fail = results.filter(r => r.status === 'rejected').length;
+  fvcLog(fail === 0 ? `All ${ok} scenes done ✓` : `${ok} done, ${fail} failed`, fail === 0 ? 'success' : 'warn');
+  fvcResetBtn();
+
+  // Show Watch Full Video button if at least one scene succeeded
+  if (ok > 0) {
+    const wrap = document.getElementById('fvc-watch-wrap');
+    const lbl = document.getElementById('fvc-watch-label');
+    if (wrap) { wrap.style.display = 'block'; if (lbl) lbl.textContent = ok; }
+  }
+}
+
+// ============================================================
+// Full Video Creator — sequential playback modal
+// ============================================================
+function fvcWatchFullVideo() {
+  // Collect all generated scene video src URLs in order
+  const srcs = [];
+  for (let i = 0; i < fvc.numScenes; i++) {
+    const card = document.getElementById(`fvc-scene-card-${i}`);
+    if (!card) continue;
+    const vid = card.querySelector('video');
+    if (vid && vid.src && vid.src !== window.location.href) srcs.push({ src: vid.src, label: `Scene ${i+1} of ${fvc.numScenes}` });
+  }
+  if (!srcs.length) { alert('No completed scenes found.'); return; }
+
+  // Build modal
+  const overlay = document.createElement('div');
+  overlay.id = 'fvc-modal';
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,0.96);z-index:9999;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  `;
+
+  let current = 0;
+
+  const sceneLabel = document.createElement('div');
+  sceneLabel.style.cssText = 'color:#a5b4fc;font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase';
+  sceneLabel.textContent = srcs[0].label;
+
+  // Progress dots
+  const dots = document.createElement('div');
+  dots.style.cssText = 'display:flex;gap:6px';
+  srcs.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.id = `fvc-dot-${i}`;
+    d.style.cssText = `width:8px;height:8px;border-radius:50%;background:${i===0?'#6366f1':'#2a2a4a'};transition:background 0.3s`;
+    dots.appendChild(d);
+  });
+
+  const video = document.createElement('video');
+  video.style.cssText = 'max-width:88vw;max-height:72vh;border-radius:12px;background:#000;box-shadow:0 0 60px rgba(0,0,0,0.8)';
+  video.controls = true;
+  video.autoplay = true;
+  video.src = srcs[0].src;
+
+  // Next scene label preview
+  const nextLabel = document.createElement('div');
+  nextLabel.style.cssText = 'font-size:11px;color:#4b5563';
+  nextLabel.textContent = srcs.length > 1 ? `Up next: ${srcs[1].label}` : '';
+
+  const controls = document.createElement('div');
+  controls.style.cssText = 'display:flex;gap:10px;align-items:center';
+
+  const prevBtn = document.createElement('button');
+  prevBtn.textContent = '⏮ Prev';
+  prevBtn.style.cssText = 'background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:7px 16px;color:#e0e0e8;cursor:pointer;font-size:12px';
+
+  const nextBtn = document.createElement('button');
+  nextBtn.textContent = 'Next ⏭';
+  nextBtn.style.cssText = prevBtn.style.cssText;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕ Close';
+  closeBtn.style.cssText = 'background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 16px;color:#6b7280;cursor:pointer;font-size:12px';
+
+  controls.appendChild(prevBtn);
+  controls.appendChild(nextBtn);
+  controls.appendChild(closeBtn);
+
+  function goTo(idx) {
+    if (idx < 0 || idx >= srcs.length) return;
+    current = idx;
+    video.src = srcs[current].src;
+    video.play().catch(()=>{});
+    sceneLabel.textContent = srcs[current].label;
+    nextLabel.textContent = current < srcs.length - 1 ? `Up next: ${srcs[current+1].label}` : '🎬 Last scene';
+    // Update dots
+    srcs.forEach((_, i) => {
+      const d = document.getElementById(`fvc-dot-${i}`);
+      if (d) d.style.background = i === current ? '#6366f1' : i < current ? '#4ade80' : '#2a2a4a';
+    });
+  }
+
+  video.addEventListener('ended', () => {
+    if (current + 1 < srcs.length) goTo(current + 1);
+    else { sceneLabel.textContent = '🎬 Full video complete'; nextLabel.textContent = ''; }
+  });
+
+  prevBtn.onclick = () => goTo(current - 1);
+  nextBtn.onclick = () => goTo(current + 1);
+  closeBtn.onclick = () => { video.pause(); document.body.removeChild(overlay); };
+  overlay.addEventListener('click', e => { if (e.target === overlay) { video.pause(); document.body.removeChild(overlay); } });
+
+  overlay.appendChild(sceneLabel);
+  overlay.appendChild(dots);
+  overlay.appendChild(video);
+  overlay.appendChild(nextLabel);
+  overlay.appendChild(controls);
+  document.body.appendChild(overlay);
+}
+
+function makeFvcSceneCard(sceneIdx) {
+  const div = document.createElement('div');
+  div.className = 'video-card';
+  div.id = `fvc-scene-card-${sceneIdx}`;
+  const label = sceneIdx === 0 ? 'Opening' : sceneIdx === fvc.numScenes - 1 ? 'Closing' : `Scene ${sceneIdx + 1}`;
+  const promptPreview = (fvc.scenePrompts[sceneIdx] || '').slice(0, 70) + ((fvc.scenePrompts[sceneIdx] || '').length > 70 ? '…' : '');
+  div.innerHTML = `
+    <div class="video-card-header" style="flex-direction:column;align-items:flex-start;gap:3px;padding:10px 12px">
+      <div style="display:flex;width:100%;align-items:center;justify-content:space-between">
+        <span style="font-size:12px;font-weight:700;color:#a5b4fc">Scene ${sceneIdx+1} of ${fvc.numScenes} · ${label}</span>
+        <span class="vc-status" style="font-size:10px;color:#6b7280">Queued</span>
+      </div>
+      <span style="font-size:10px;color:#4b5563;font-style:italic">${promptPreview}</span>
+    </div>
+    <div class="vc-prog progress-wrap" style="display:none;margin:6px 8px 0;"><div class="progress-bar"></div></div>
+    <div class="video-placeholder"><div style="font-size:24px">🎥</div></div>
+    <div class="video-wrap">
+      <video loop playsinline muted style="width:100%;max-height:260px;display:block;pointer-events:none;"></video>
+      <div class="video-overlay" onclick="togglePlay(this)"><div class="play-icon">▶</div></div>
+    </div>
+    <button class="dl-btn">⬇️ Download Scene ${sceneIdx+1}</button>
+  `;
+  return div;
+}
+
+async function runFvcScene(sceneIdx, seed, apiKey, version, prompt, sourceImg) {
+  const card = document.getElementById(`fvc-scene-card-${sceneIdx}`);
+  const statusEl = card.querySelector('.vc-status');
+  const progressEl = card.querySelector('.vc-prog');
+  const placeholder = card.querySelector('.video-placeholder');
+  const videoWrap = card.querySelector('.video-wrap');
+  const dlBtn = card.querySelector('.dl-btn');
+
+  statusEl.textContent = 'Starting...';
+  progressEl.style.display = 'block';
+  fvcLog(`Scene ${sceneIdx+1}: starting | seed: ${seed}`);
+
+  try {
+    const sceneObj = {
+      model: fvc.model, endpoint: fvc.endpoint,
+      imageBase64: sourceImg,
+      prompt, negPrompt: '',
+      ratio: fvc.ratio, sdResolution: fvc.sdResolution, sdDuration: fvc.sdDuration,
+      sdAuto: false, sdAudio: true, motion: 5, fps: 24, cfg: 7, duration: 5,
+      seed: '', _variedPrompts: null,
+    };
+    const input = buildInputFromScene(sceneObj, seed, 0);
+
+    let res;
+    if (fvc.endpoint === 'models') {
+      res = await fetch(`/api/models/${fvc.model}/predictions`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Token ' + apiKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input }),
+      });
+    } else {
+      res = await fetch('/api/predictions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Token ' + apiKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version, input }),
+      });
+    }
+    if (!res.ok) { const e = await res.json(); throw new Error(e.detail || JSON.stringify(e)); }
+    const pred = await res.json();
+    fvcLog(`Scene ${sceneIdx+1}: ID ${pred.id}`);
+    statusEl.textContent = 'Processing...';
+
+    const url = await pollPrediction(pred.id, apiKey, statusEl);
+
+    const video = card.querySelector('video');
+    video.src = url; video.load(); video.play().catch(() => {});
+    placeholder.style.display = 'none';
+    progressEl.style.display = 'none';
+    videoWrap.style.display = 'block';
+    card.querySelector('.play-icon').textContent = '⏸';
+    statusEl.textContent = 'Done ✓'; statusEl.style.color = '#4ade80';
+    dlBtn.style.display = 'block';
+    dlBtn.onclick = () => triggerDownload(url, `scene-${sceneIdx+1}-of-${fvc.numScenes}-seed${seed}.mp4`);
+    fvcLog(`Scene ${sceneIdx+1}: done ✓`, 'success');
+
+  } catch(err) {
+    fvcLog(`Scene ${sceneIdx+1} error: ${err.message}`, 'error');
+    statusEl.textContent = 'Failed'; statusEl.style.color = '#f87171';
+    progressEl.style.display = 'none';
+    throw err;
+  }
+}
+
+function fvcLog(msg, type = 'info') {
+  const box = document.getElementById('fvc-log');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  box.appendChild(line); box.scrollTop = box.scrollHeight;
+}
+
+function fvcResetBtn() {
+  const btn = document.getElementById('fvc-gen-btn');
+  btn.disabled = false; btn.textContent = '⚡ Generate Video';
+}
+
+// ============================================================
+// Shared helpers
 // ============================================================
 function togglePlay(overlay) {
   const video = overlay.closest('.video-wrap').querySelector('video');
@@ -765,49 +1700,8 @@ function triggerDownload(url, filename) {
   setTimeout(() => document.body.removeChild(a), 1000);
 }
 
-async function getModelVersion(modelId, apiKey, sid) {
-  if (versionCache[modelId]) return versionCache[modelId];
-  const res = await fetch(`/api/models/${modelId}/versions`, { headers: { 'Authorization': 'Token ' + apiKey } });
-  if (!res.ok) throw new Error('Could not fetch versions');
-  const data = await res.json();
-  const v = data.results[0].id;
-  versionCache[modelId] = v;
-  addLog(sid, 'Version: ' + v.slice(0, 12) + '...');
-  return v;
-}
-
-function resetBtn(sid) {
-  const btn = document.getElementById(`gbtn-${sid}`);
-  btn.disabled = false;
-  btn.textContent = `⚡ Generate Scene ${sid + 1}`;
-}
-
-function syncAll() {
-  const src = scenes[0];
-  for (let sid = 1; sid < NUM_SCENES; sid++) {
-    // Model
-    selectModel(sid, src.model);
-
-    // Resolution (quality)
-    const resEl = document.querySelector(`#sdparams-${sid} select`);
-    if (resEl) { resEl.value = src.sdResolution; scenes[sid].sdResolution = src.sdResolution; }
-
-    // Aspect ratio — click the matching button
-    document.querySelectorAll(`#rgrid-${sid} .ratio-btn`).forEach(b => {
-      if (b.textContent.trim() === src.ratio) b.click();
-    });
-  }
-
-  const btn = event.currentTarget;
-  const orig = btn.textContent;
-  btn.textContent = '✓ Synced!';
-  btn.style.color = '#4ade80'; btn.style.borderColor = '#4ade80';
-  setTimeout(() => { btn.textContent = orig; btn.style.color = '#a5b4fc'; btn.style.borderColor = '#2a2a4a'; }, 1500);
-}
-
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// Mirror console.error to all scene logs so errors are always visible
 const _origError = console.error.bind(console);
 console.error = (...args) => {
   _origError(...args);
